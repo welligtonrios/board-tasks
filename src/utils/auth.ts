@@ -13,6 +13,10 @@ export const requireAuth = async (context: any, destination: string) => {
   }
 
   return {
-    props: {  },
+    props: { 
+      user: {
+        email: session?.user?.email,
+      }, 
+    },
   };
 };
