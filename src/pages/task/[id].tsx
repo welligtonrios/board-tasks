@@ -1,22 +1,83 @@
+import { ChangeEvent, FormEvent, useState } from "react";
+import { useSession } from "next-auth/react";
+
 import Head from "next/head";
 import  styles  from "./style.module.css";
 import { GetServerSideProps } from "next";
-import { doc, getDoc } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc } from "firebase/firestore";
 import { db } from "@/service/firebaseConnection";
+import { Textarea } from "@/components/textarea";
 
-export default function Task() {
+interface TaskProps {
+    item: {
+        tarefa: string,
+        public: boolean,
+        created: string,
+        user:  string,
+        taskId:  string
+    }
+}
+
+export default function Task({ item }: TaskProps) {
+
+    const { data: session } = useSession();
+
+    const [input, setInput] = useState("");
+
+    async function handleComment(event: FormEvent) {
+        event.preventDefault();
+    
+        if (input === "") return;
+    
+        if (!session?.user?.email || !session?.user?.name) return;
+    
+        try {
+          const docRef = await addDoc(collection(db, "comments"), {
+            comment: input,
+            created: new Date(),
+            user: session?.user?.email,
+            name: session?.user?.name,
+            taskId: item?.taskId,
+          });
+    
+          setInput("");
+        } catch (err) {
+          console.log(err);
+        }
+    }
+
     return (
       <div className={styles.container}>
         <Head>
-          <title>Detalhes da tarefa</title>
+          <title>Tarefa - Detalhes da tarefa</title>
         </Head>
   
         <main className={styles.main}>
           <h1>Tarefa</h1>
+          <article className={styles.task}>
+            <p>{item.tarefa}</p>
+          </article>
         </main>
+  
+        <section className={styles.commentsContainer}>
+          <h2>Deixar comentário</h2>
+  
+          <form onSubmit={handleComment}>
+            <Textarea 
+            value={input}
+            onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
+                setInput(event.target.value)}
+            placeholder="Digite seu comentário..." 
+            />
+            <button className={styles.button} 
+                    disabled={!session?.user} >
+                Enviar comentário
+            </button>
+          </form>
+        </section>
       </div>
     );
-}
+  }
 
 export const getServerSideProps: GetServerSideProps = async ({ params }) => {
 
@@ -45,7 +106,9 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
     };
    
     return {
-        props: {},
+        props: {
+            item: task
+        },
       };
 }
 
