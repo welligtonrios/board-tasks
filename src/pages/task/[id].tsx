@@ -4,9 +4,11 @@ import { useSession } from "next-auth/react";
 import Head from "next/head";
 import  styles  from "./style.module.css";
 import { GetServerSideProps } from "next";
-import { addDoc, collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, getDocs, query, where, deleteDoc } from "firebase/firestore";
 import { db } from "@/service/firebaseConnection";
+
 import { Textarea } from "@/components/textarea";
+import { FaTrash } from "react-icons/fa";
 
 interface TaskProps {
     item: {
@@ -49,11 +51,34 @@ export default function Task({ item, allComments }: TaskProps) {
             name: session?.user?.name,
             taskId: item?.taskId,
           });
+
+          const data = {
+            id: docRef.id,
+            comment: input,
+            user: session?.user?.email,
+            name: session?.user?.name,
+            taskId: item?.taskId,
+          };
+
+          setComments((oldItems) => [...oldItems, data]);
     
           setInput("");
         } catch (err) {
           console.log(err);
         }
+    }
+
+    async function handleDeleteComment(id: string) {
+      try {
+        const docRef = doc(db, "comments", id);
+        await deleteDoc(docRef);
+  
+        const deletComment = comments.filter((item) => item.id !== id);
+  
+        setComments(deletComment);
+      } catch (err) {
+        console.log(err);
+      }
     }
 
     return (
@@ -94,8 +119,19 @@ export default function Task({ item, allComments }: TaskProps) {
 
                 {comments.map((item) => (
                 <article key={item.id} className={styles.comment}>
-                    <p>{item.comment}</p>
-                </article>
+                  <div className={styles.headComment}>
+                    <label className={styles.commentsLabel}>{item.name}</label>
+                      {item.user === session?.user?.email && (
+                        <button
+                          className={styles.buttonTrash}
+                          onClick={() => handleDeleteComment(item.id)}
+                        >
+                          <FaTrash size={18} color="#EA3140" />
+                        </button>
+                      )}
+                    </div>
+                  <p>{item.comment}</p>
+              </article>
                 ))}
         </section>
       </div>
